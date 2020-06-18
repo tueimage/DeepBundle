@@ -150,7 +150,7 @@ class base_model(object):
                         val_tsne, _, _, _, intermediate_list_ep = self.evaluate(val_data[0], val_labels[0], False, sess) # Only one validation subject
                         epoch_tsne = epoch
         
-        _, _, _, _, intermediate_train = self.evaluate(train_data, train_labels, False, sess) # Haal features uit laatste model voor SVM
+        _, _, _, _, intermediate_train = self.evaluate(train_data, train_labels, False, sess) # Get features from last model for SVM
         
         sess.close()
         
@@ -196,8 +196,6 @@ class base_model(object):
                 if abs(imbalance - 1) < 1e-2: # Balanced (rounding can lead to slight imbalance)
                     cross_entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=logits, labels=labels)
                 else:
-                    
-#                    logits = tf.reduce_max(logits, reduction_indices=[1])
                     labels2 = tf.one_hot(labels, 2)
                     labels3 = tf.to_float(labels2)
                     cross_entropy = tf.nn.weighted_cross_entropy_with_logits(labels=labels3, logits=logits, pos_weight=imbalance) # Added class weight
@@ -309,7 +307,7 @@ class cgcnn(base_model):
             j += int(np.log2(pp)) if pp > 1 else 0
         L = self.L # Only use usefull Laplacians
         
-        # Store attributes and bind operations.
+        # Store attributes and bind operations
         self.L, self.F, self.K, self.p, self.M = L, F, K, p, M
         self.num_epochs, self.learning_rate = num_epochs, learning_rate
         self.decay_rate, self.decay_steps = decay_rate, decay_steps
@@ -319,7 +317,7 @@ class cgcnn(base_model):
         self.model_save = model_save
         self.imbalance = imbalance
         
-        # Build the computational graph.
+        # Build the computational graph
         self.build_graph(M_0)
     
     def rescale_L(self, L, lmax=2):
@@ -334,7 +332,7 @@ class cgcnn(base_model):
         """Chebyshev spectralgraph convolution with polynomial order K"""
         N, M, Fin = x.get_shape()
         N, M, Fin = int(N), int(M), int(Fin)
-        # Rescale Laplacian and store as a TF sparse tensor. Copy to not modify the shared L.
+        # Rescale Laplacian and store as a TF sparse tensor. Copy to not modify the shared L
         L = scipy.sparse.csr_matrix(L)
         L = self.rescale_L(L, lmax=2)
         L = L.tocoo()
@@ -358,7 +356,7 @@ class cgcnn(base_model):
         x = tf.reshape(x, [K, M, Fin, N])  # K x M x Fin x N
         x = tf.transpose(x, perm=[3, 1, 2, 0])  # N x M x Fin x K
         x = tf.reshape(x, [N*M, Fin*K])  # N*M x Fin*K
-        # Filter: Fin*Fout filters of order K, i.e. one filterbank per feature pair.
+        # Filter: Fin*Fout filters of order K, i.e. one filterbank per feature pair
         W = self._weight_variable([Fin*K, Fout], regularization=False)
         x = tf.matmul(x, W)  # N*M x Fout
         return tf.reshape(x, [N, M, Fout])  # N x M x Fout
@@ -368,7 +366,6 @@ class cgcnn(base_model):
         if p > 1:
             x = tf.expand_dims(x, 3)  # N x M x F x 1
             x = tf.nn.max_pool(x, ksize=[1, p, 1, 1], strides=[1, p, 1, 1], padding='SAME')
-            #tf.maximum
             return tf.squeeze(x, [3])  # N x M/p x F
         return x
 
@@ -380,7 +377,7 @@ class cgcnn(base_model):
         x = tf.matmul(x, W) + b
         return tf.nn.relu(x) if relu else x
 
-    def inference(self, x): # Inference = make predictions
+    def inference(self, x):
         """
         It builds the model, i.e. the computational graph, as far as
         is required for running the network forward to make predictions,
@@ -391,8 +388,8 @@ class cgcnn(base_model):
             M: number of vertices (features)
         """
         # Graph convolutional layers.
-        for i in range(len(self.p)): # Aantal 'blokken': conv+act+pool
-            with tf.variable_scope('conv{}'.format(i+1)): # Prefix
+        for i in range(len(self.p)):
+            with tf.variable_scope('conv{}'.format(i+1)):
                 with tf.name_scope('filter'):
                     x = self.chebyshev5(x, self.L[i], self.F[i], self.K[i])
                 with tf.name_scope('relu'):
@@ -402,11 +399,11 @@ class cgcnn(base_model):
         
         # Fully connected hidden layers.
         N, M, F = x.get_shape()
-        x = tf.reshape(x, [int(N), int(M*F)])  # N x M
+        x = tf.reshape(x, [int(N), int(M*F)])
         for i, M in enumerate(self.M[:-1]):
             with tf.variable_scope('fc{}'.format(i+1)):
                 x = self.fc(x, M)
-                if i == (len(self.M) - 2): # We want the second to last layer
+                if i == (len(self.M) - 2): # Second to last layer
                     intermediate = x 
         
         # Logits linear layer, i.e. softmax without normalization.
