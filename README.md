@@ -18,7 +18,7 @@ $ python main.py
 <a id="1">[1]</a> 
 F. Liu, J. Feng, G. Chen, Y. Wu, Y. Hong, P. T. Yap, and D. Shen,
 [DeepBundle: Fiber Bundle Parcellation with Graph Convolution NeuralNetworks](https://arxiv.org/abs/1906.03051), 
-in Lecture Notes in Computer Science (including subseries Lecture Notes in Artificial Intelligence and Lecture Notes in Bioinfor-matics),
+in Lecture Notes in Computer Science (including subseries Lecture Notes in Artificial Intelligence and Lecture Notes in Bioinformatics),
 vol. 11849 LNCS, 2019, pp. 88–95
 
 <a id="2">[2]</a> 
