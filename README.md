@@ -9,7 +9,7 @@ To install all the requirements, run the following:
 $ pip install -r req.txt
 ```
 
-Model parameters and directories for loading data and saving results are defined in the `params.py` file, the code can be run using:
+Settings are defined in the `params.py` file and model parameters in `main.py`, the code can be run using:
 ```
 $ python main.py
 ```
