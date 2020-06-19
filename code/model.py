@@ -76,7 +76,7 @@ class base_model(object):
             N: number of signals (samples)
         mine - FP mining or not (boolean)
         """
-        if mine: 
+        if mine: # FP mining
             FPidx = []
             predictions, loss_b, intermediate_list = self.predict(np.array(data), np.array(labels), sess)
             for i in range(labels.shape[0]):
@@ -105,8 +105,8 @@ class base_model(object):
         t_SNE - Save intermediate features for t-SNE visualization or not (boolean)
         finetune - Finetune model (for FP mining) or not (boolean)
         """
-        if finetune:
-            sess = self._get_session(sess) # Load parameters of best epoch
+        if finetune: # FP mining
+            sess = self._get_session(sess) # Load parameters of best epoch of initial model
         else:
             sess = tf.Session(graph=self.graph)
             sess.run(self.op_init) # Initialize model
@@ -123,7 +123,7 @@ class base_model(object):
         
         for step in range(1, num_steps+1):
             if len(indices) < self.batch_size:
-                indices.extend(np.random.permutation(train_data.shape[0])) # Adds random rearrangement
+                indices.extend(np.random.permutation(train_data.shape[0])) # Also adds random shuffle
             idx = [indices.popleft() for i in range(self.batch_size)]
             batch_data, batch_labels = train_data[idx, :, :].astype('float16'), train_labels[idx]
             if type(batch_data) is not np.ndarray:
@@ -141,7 +141,7 @@ class base_model(object):
                 val_loss.append(val)
                 epochs.append(epoch)
 
-                if f1 > f1_max: # Save if the best validation F1 score
+                if f1 > f1_max: # Validation F1 score as performance metric
                     self.op_saver.save(sess, path, global_step=step) 
                     f1_max = f1
                     prec_val_max = prec_val
@@ -156,7 +156,7 @@ class base_model(object):
         
         return train_loss, val_loss, f1_scores, intermediate_list_ep, epochs, intermediate_train, epoch_tsne, prec_val_max, rec_val_max
    
-    # Methods to construct the computational graph.
+    # Methods to construct the computational graph
     def build_graph(self, M_0):
         """
         Build the computational graph of the model.
@@ -166,7 +166,7 @@ class base_model(object):
         self.graph = tf.Graph()
         with self.graph.as_default():
 
-            # Inputs.
+            # Inputs
             with tf.name_scope('inputs'):
                 self.ph_data = tf.placeholder(tf.float32, (self.batch_size, M_0, 3), 'data')
                 self.ph_labels = tf.placeholder(tf.int32, (self.batch_size), 'labels')
@@ -179,7 +179,7 @@ class base_model(object):
             self.intermediate = tf.dtypes.cast(intermediate, tf.float16) 
             
             self.op_init = tf.global_variables_initializer() # Initialize variables            
-            self.op_saver = tf.train.Saver(max_to_keep=1) # Save model parameters
+            self.op_saver = tf.train.Saver(max_to_keep=1)
         
         self.graph.finalize()
 
@@ -193,12 +193,12 @@ class base_model(object):
         """Adds to the inference model the layers required to generate loss."""
         with tf.name_scope('loss'):
             with tf.name_scope('cross_entropy'):
-                if abs(imbalance - 1) < 1e-2: # Balanced (rounding can lead to slight imbalance)
+                if abs(imbalance - 1) < 1e-2: # Balanced (though rounding can lead to slight imbalance)
                     cross_entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=logits, labels=labels)
                 else:
-                    labels2 = tf.one_hot(labels, 2)
-                    labels3 = tf.to_float(labels2)
-                    cross_entropy = tf.nn.weighted_cross_entropy_with_logits(labels=labels3, logits=logits, pos_weight=imbalance) # Added class weight
+                    labels_oh = tf.one_hot(labels, 2)
+                    labels_f = tf.to_float(labels_oh)
+                    cross_entropy = tf.nn.weighted_cross_entropy_with_logits(labels=labels_f, logits=logits, pos_weight=imbalance) # Weighted variant
                     
                 cross_entropy = tf.reduce_mean(cross_entropy)
             with tf.name_scope('regularization'):
@@ -219,7 +219,7 @@ class base_model(object):
             if decay_rate != 1:
                 learning_rate = tf.train.exponential_decay(learning_rate, global_step, decay_steps, decay_rate, staircase=True)
 
-            optimizer = tf.train.GradientDescentOptimizer(learning_rate) #SGD
+            optimizer = tf.train.GradientDescentOptimizer(learning_rate)
 
             grads = optimizer.compute_gradients(loss)
             op_gradients = optimizer.apply_gradients(grads, global_step=global_step)
