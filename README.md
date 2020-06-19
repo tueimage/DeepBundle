@@ -1,5 +1,5 @@
 # Improving Performance of the DeepBundle Tractography Parcellation
-This repository contains code that emulates the DeepBundle [[1]](#1) framework, visualizes its features, and explores techniques to reduce false positives.
+This repository contains code that emulates the DeepBundle [[1]](#1) framework, visualizes its features, and explores the addition of an SVM on top of the network and false positive mining to improve performance.
 
 ## Setup
 A publicly available dataset [[2]](#2) containing 105 subjects (72 bundles each) from the Human Connectome Project (HCP) [[3]](#3) is used.
@@ -9,7 +9,7 @@ To install all the requirements, run the following:
 $ pip install -r req.txt
 ```
 
-Model parameters and directories for loading data and saving results are defined in the `params.py` file, the code can be run using:
+Settings are defined in the `params.py` file and model parameters in `main.py`, the code can be run using:
 ```
 $ python main.py
 ```
